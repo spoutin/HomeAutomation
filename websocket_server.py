@@ -1,5 +1,6 @@
 import tornado.websocket
 
+
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def initialize(self, message_broker):
@@ -17,4 +18,3 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         return True
-

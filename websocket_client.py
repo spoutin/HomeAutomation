@@ -3,6 +3,10 @@ from ws4py.client.threadedclient import WebSocketClient
 
 class Client(WebSocketClient):
 
+    def __init__(self, url):
+        super().__init__(url)
+        self.message_broker = None
+
     def setup(self, message_broker):
         self.message_broker = message_broker
         self.connect()
