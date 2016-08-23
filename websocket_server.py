@@ -18,3 +18,11 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def check_origin(self, origin):
         return True
+
+
+class RestAPI(tornado.web.RequestHandler):
+    def get(self):
+        self.write('GET - Welcome to the REST Handler!')
+
+    def post(self):
+        self.write('POST - Welcome to the REST Handler!')
