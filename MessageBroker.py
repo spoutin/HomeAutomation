@@ -1,5 +1,7 @@
 import queue
 import threading
+from timer import perpetualTimer
+
 
 class MessageBroker:
 
@@ -14,6 +16,14 @@ class MessageBroker:
         self.senderthread = self.SenderThread(self)
         self.senderthread.start()
 
+        # Setup never ending timer
+        timer = perpetualTimer(60, self.update_all)
+        timer.start()
+
+    def update_all(self):
+        for unit in self.units:
+            unit.request_update(self.pi_clients)
+
     def check_update_units(self, message):
         for unit in self.units:
             if unit.check_update(str(message)):
@@ -22,9 +32,12 @@ class MessageBroker:
 
     def check_units(self, message):
         for unit in self.units:
-            if (unit.check_message(str(message))):
+            if unit.check_message(str(message)):
                 unit.decode_message(message)
-                self.ws_server_queue.put(str(message),block=True,timeout=1)
+                self.ws_server_queue.put(str(message), block=True, timeout=1)
+
+    def update_unit(self, json):
+        pass
 
     class SenderThread(threading.Thread):
 
@@ -37,7 +50,7 @@ class MessageBroker:
         def run(self):
             while not self.stoprequest.is_set():
                 try:
-                    msg = self.ws_server_queue.get(True,0.05)
+                    msg = self.ws_server_queue.get(True, 0.05)
                     [x.write_message(str(msg)) for x in self.messagebroker.ws_server_connection]
                 except queue.Empty:
                     continue

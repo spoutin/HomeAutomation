@@ -35,7 +35,10 @@ class base:
             return False
 
     def request_update(self, pi_clients):
-        [x.send(self.update_msg) for x in pi_clients]
+        self.send_to_pi(pi_clients, self.update_msg)
+
+    def send_to_pi(self, pi_clients, message):
+        [x.send(str(message)) for x in pi_clients]
 
 class temp(base):
 
@@ -65,12 +68,55 @@ class nest(base):
         self.napi = nest_api.Nest(username, password)
         self.temp = None
         self.humidity = None
+        self.ac_state = None
+        self.heater_state = None
+        self.target = None
+        self.away = None
         self.ws_queue = ws_queue
 
     def request_update(self, *args):
         try:
             self.temp = self.napi.structures[0].devices[0].temperature
-            self.humidity = self.napi.structures[0].devices[0].humidity
-            self.ws_queue.put(json.dumps({"nest":{"temp":round(self.temp, 1), "humidity":self.humidity}}))
         except:
             print("Error trying to get Nest information!")
+        self.humidity = self.napi.structures[0].devices[0].humidity
+        self.target = self.napi.structures[0].devices[0].target
+        self.away = self.napi.structures[0].away
+        self.ac_state = self.napi.structures[0].devices[0].hvac_ac_state
+        self.heater_state = self.napi.structures[0].devices[0].hvac_heater_state
+        self.ws_queue.put(json.dumps({"nest": {"temp": round(self.temp, 1),
+                                               "humidity": self.humidity,
+                                               "ac_state": self.ac_state,
+                                               "heater_state": self.heater_state,
+                                               "target": round(self.target,1),
+                                               "away": self.away
+                                               }
+                                      }))
+
+
+class garage(base):
+
+    def __init__(self, name, update_msg):
+        super().__init__(name, update_msg)
+        self.status = None
+
+    def decode_message(self, message):
+        m = self.regex.match(str(message))
+        self.status = m.group(1)
+
+    def open_close(self, state, pi_clients):
+        if state == "Open":
+            self.send_to_pi(pi_clients, "GRGOPN")
+        elif state == "Close":
+            self.send_to_pi(pi_clients, "GRGCLS")
+
+
+class pump(base):
+
+    def __init__(self, name, update_msg):
+        super().__init__(name, update_msg)
+        self.level = None
+
+    def decode_message(self, message):
+        m = self.regex.match(str(message))
+        self.level = m.group(1)
