@@ -1,13 +1,16 @@
 import re
 import nest as nest_api
+import requests.exceptions
 import json
 import configparser
 
-class base:
+
+class Base:
 
     def __init__(self, name, update_msg=None):
         self.name = name
         self.regex = None
+        self.regex_update = None
         self.update_msg = update_msg
 
     def set_regex(self, pattern):
@@ -37,10 +40,12 @@ class base:
     def request_update(self, pi_clients):
         self.send_to_pi(pi_clients, self.update_msg)
 
-    def send_to_pi(self, pi_clients, message):
+    @staticmethod
+    def send_to_pi(pi_clients, message):
         [x.send(str(message)) for x in pi_clients]
 
-class temp(base):
+
+class Temp(Base):
 
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
@@ -51,9 +56,10 @@ class temp(base):
         m = self.regex.match(str(message))
         self.temp = m.group(2)
         self.humidity = m.group(1)
-        #print("%s - Temp: %s Humidity: %s" %(self.name, self.temp, self.humidity))
+        # print("%s - Temp: %s Humidity: %s" %(self.name, self.temp, self.humidity))
 
-class nest(base):
+
+class Nest(Base):
 
     def __init__(self, name, update_msg, ws_queue):
         super().__init__(name, update_msg)
@@ -65,7 +71,7 @@ class nest(base):
         except KeyError:
             print("Missing Nest username or password in nest.ini file")
             raise
-        self.napi = nest_api.Nest(username, password)
+        self.napi = nest_api.Nest(username, password, access_token_cache_file='./cache/auth_cache')
         self.temp = None
         self.humidity = None
         self.ac_state = None
@@ -76,9 +82,12 @@ class nest(base):
 
     def request_update(self, *args):
         try:
-            self.temp = self.napi.structures[0].devices[0].temperature
-        except:
-            print("Error trying to get Nest information!")
+            self._request_update()
+        except requests.exceptions.HTTPError:
+            print("Error getting Nest information!")
+
+    def _request_update(self):
+        self.temp = self.napi.structures[0].devices[0].temperature
         self.humidity = self.napi.structures[0].devices[0].humidity
         self.target = self.napi.structures[0].devices[0].target
         self.away = self.napi.structures[0].away
@@ -88,13 +97,13 @@ class nest(base):
                                                "humidity": self.humidity,
                                                "ac_state": self.ac_state,
                                                "heater_state": self.heater_state,
-                                               "target": round(self.target,1),
+                                               "target": round(self.target, 1),
                                                "away": self.away
                                                }
                                       }))
 
 
-class garage(base):
+class Garage(Base):
 
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
@@ -111,7 +120,7 @@ class garage(base):
             self.send_to_pi(pi_clients, "GRGCLS")
 
 
-class pump(base):
+class Pump(Base):
 
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
