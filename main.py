@@ -37,6 +37,9 @@ wsc.setup(message_broker)
 app = tornado.web.Application([
     (r'/', IndexHandler),
     (r'/static/(.*)', tornado.web.StaticFileHandler, {'path': '/usr/local/Home_Automation/web/static/'}),
-    (r"/websocket/*", websocket_server.WebSocketHandler, {"message_broker": message_broker}), ])
+    (r"/websocket/*", websocket_server.WebSocketHandler, {"message_broker": message_broker}),
+    (r"/api/v1/units/(\d\d\d)/?", websocket_server.RestAPI),
+    (r"/api/v1/units/?", websocket_server.RestAPI)
+    ])
 app.listen(8888)
 tornado.ioloop.IOLoop.current().start()
