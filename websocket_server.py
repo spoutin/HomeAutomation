@@ -1,5 +1,5 @@
 import tornado.websocket
-
+import json
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
@@ -21,8 +21,15 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
 
 class RestAPI(tornado.web.RequestHandler):
+
+    def initialize(self, message_broker):
+        self.message_broker = message_broker
+
     def get(self, unit_id=None):
-        self.write("GET - Welcome to the REST Handler! %s" % unit_id)
+        if unit_id:
+            self.write("GET - Welcome to the REST Handler! %s" % unit_id)
+        else:
+            self.write(json.dumps(self.message_broker.units, default=str))
 
     def post(self):
         self.write('POST - Welcome to the REST Handler!')
