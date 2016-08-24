@@ -21,8 +21,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
 
 class RestAPI(tornado.web.RequestHandler):
-    def get(self):
-        self.write('GET - Welcome to the REST Handler!')
+    def get(self, unit_id=None):
+        self.write("GET - Welcome to the REST Handler! %s" % unit_id)
 
     def post(self):
         self.write('POST - Welcome to the REST Handler!')
