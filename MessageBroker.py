@@ -20,6 +20,7 @@ class MessageBroker:
         timer = perpetualTimer(60, self.update_all)
         timer.start()
 
+    # Run the update function on all units
     def update_all(self):
         for unit in self.units:
             unit.request_update(self.pi_clients)

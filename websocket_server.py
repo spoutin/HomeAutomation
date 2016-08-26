@@ -1,5 +1,7 @@
 import tornado.websocket
 import json
+import baseObject
+
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
@@ -27,9 +29,20 @@ class RestAPI(tornado.web.RequestHandler):
 
     def get(self, unit_id=None):
         if unit_id:
-            self.write("GET - Welcome to the REST Handler! %s" % unit_id)
+            unit = baseObject.get_unit(self.message_broker.units, int(unit_id))
+            if unit:
+                self.write("Unit: " + json.dumps(unit.__dict__, default=str))
+            else:
+                self.set_status(404)
+                self.finish("<html><body>Unit ID {} not found</body></html>".format(unit_id))
         else:
-            self.write(json.dumps(self.message_broker.units, default=str))
+            self.write("All Units:" + json.dumps(baseObject.units_to_dict(self.message_broker.units), default=str))
 
-    def post(self):
-        self.write('POST - Welcome to the REST Handler!')
+    def post(self, unit_id=None):
+        unit = baseObject.get_unit(self.message_broker.units, int(unit_id))
+        if unit:
+            unit.request_update(self.message_broker.pi_clients)
+            self.write("<html><body>Request Sent to update {}</body></html>".format(unit.name))
+        else:
+            self.set_status(404)
+            self.finish("<html><body>Unit ID {} not found</body></html>".format(unit_id))
