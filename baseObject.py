@@ -106,8 +106,12 @@ class Nest(Base):
         self.target = None
         self.away = None
         self.ws_queue = ws_queue
+        self.actions.append("update_temp")
 
-    def request_update(self, *args):
+    def update_temp(self, value, **kwargs):
+        self.napi.structures[0].devices[0].temperature = int(value)
+
+    def request_update(self, *args, **kwargs):
         try:
             self._request_update()
         except requests.exceptions.HTTPError:
