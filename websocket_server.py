@@ -46,3 +46,18 @@ class RestAPI(tornado.web.RequestHandler):
         else:
             self.set_status(404)
             self.finish("<html><body>Unit ID {} not found</body></html>".format(unit_id))
+
+    def put(self, unit_id=None):
+        if unit_id:
+            unit = baseObject.get_unit(self.message_broker.units, int(unit_id))
+            if not unit:
+                self.set_status(404)
+                self.finish("<html><body>Unknown Unit ID</body></html>")
+                return
+            data = tornado.escape.json_decode(self.request.body)
+            for key, value in data.items():
+                unit.run_actions(function=key, value=value, pi_clients=self.message_broker.pi_clients)
+                self.write("<html><body>Request Sent to {} {} {}</body></html>".format(key, value, unit_id))
+        else:
+            self.set_status(404)
+            self.finish("<html><body>Missing Unit ID</body></html>")
