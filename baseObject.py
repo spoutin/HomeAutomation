@@ -92,7 +92,7 @@ class Nest(Base):
         super().__init__(name, update_msg)
         try:
             config = configparser.ConfigParser()
-            config.read('nest.ini')
+            config.read('config/nest.ini')
             username = config['nest']['username']
             password = config['nest']['password']
         except KeyError:
