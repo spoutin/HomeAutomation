@@ -3,15 +3,33 @@ import nest as nest_api
 import requests.exceptions
 import json
 import configparser
+import itertools
 
 
-class Base:
+# Input is the list of units
+# Output is the list of units as dictionaries
+def units_to_dict(units):
+    unit_dict = []
+    for unit in units:
+        unit_dict.append(unit.__dict__)
+    return unit_dict
+
+
+def get_unit(units, unit_id):
+    for unit in units:
+        if unit.id == unit_id:
+            return unit
+    return
+
+class Base(object):
+    _create_id = itertools.count(0)
 
     def __init__(self, name, update_msg=None):
         self.name = name
         self.regex = None
         self.regex_update = None
         self.update_msg = update_msg
+        self.id = self._create_id.__next__()
 
     def set_regex(self, pattern):
         self.regex = re.compile(pattern)
