@@ -21,6 +21,7 @@ def get_unit(units, unit_id):
             return unit
     return
 
+
 class Base(object):
     _create_id = itertools.count(0)
 
@@ -30,6 +31,8 @@ class Base(object):
         self.regex_update = None
         self.update_msg = update_msg
         self.id = self._create_id.__next__()
+        # Default Actions
+        self.actions = ["request_update"]
 
     def set_regex(self, pattern):
         self.regex = re.compile(pattern)
@@ -55,8 +58,14 @@ class Base(object):
         else:
             return False
 
-    def request_update(self, pi_clients):
+    def request_update(self, pi_clients, **kwargs):
         self.send_to_pi(pi_clients, self.update_msg)
+
+    def run_actions(self, function, **kwargs):
+        if function in self.actions:
+            getattr(self, function)(**kwargs)
+        else:
+            raise ValueError("Request unknown or not allowed {}".format(function))
 
     @staticmethod
     def send_to_pi(pi_clients, message):
@@ -126,15 +135,17 @@ class Garage(Base):
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
         self.status = None
+        # additional actions
+        self.actions.append("toggle")
 
     def decode_message(self, message):
         m = self.regex.match(str(message))
         self.status = m.group(1)
 
-    def open_close(self, state, pi_clients):
-        if state == "Open":
+    def toggle(self, state, pi_clients):
+        if state == "open":
             self.send_to_pi(pi_clients, "GRGOPN")
-        elif state == "Close":
+        elif state == "close":
             self.send_to_pi(pi_clients, "GRGCLS")
 
 
