@@ -9,6 +9,7 @@ class MessageBroker:
         self.running = False
         self.units = []
         self.ws_server_queue = queue.Queue()
+        self.ws_wemo_queue = queue.Queue()
         self.ws_server_connection = []
         self.pi_clients = []
 
@@ -37,25 +38,22 @@ class MessageBroker:
                 unit.decode_message(message)
                 self.ws_server_queue.put(str(message), block=True, timeout=1)
 
-    def update_unit(self, json):
-        pass
-
     class SenderThread(threading.Thread):
 
-        def __init__(self, messagebroker):
+        def __init__(self, message_broker):
             super(MessageBroker.SenderThread, self).__init__()
-            self.messagebroker = messagebroker
-            self.ws_server_queue = self.messagebroker.ws_server_queue
-            self.stoprequest = threading.Event()
+            self.message_broker = message_broker
+            self.ws_server_queue = self.message_broker.ws_server_queue
+            self.stop_request = threading.Event()
 
         def run(self):
-            while not self.stoprequest.is_set():
+            while not self.stop_request.is_set():
                 try:
                     msg = self.ws_server_queue.get(True, 0.05)
-                    [x.write_message(str(msg)) for x in self.messagebroker.ws_server_connection]
+                    [x.write_message(str(msg)) for x in self.message_broker.ws_server_connection]
                 except queue.Empty:
                     continue
 
         def join(self, timeout=None):
-            self.stoprequest.set()
+            self.stop_request.set()
             super(MessageBroker.SenderThread, self).join(timeout)

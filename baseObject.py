@@ -4,6 +4,7 @@ import requests.exceptions
 import json
 import configparser
 import itertools
+import wemo
 
 
 # Input is the list of units
@@ -24,6 +25,7 @@ def get_unit(units, unit_id):
 
 class Base(object):
     _create_id = itertools.count(0)
+    env = None
 
     def __init__(self, name, update_msg=None):
         self.name = name
@@ -44,7 +46,7 @@ class Base(object):
 
     def check_update(self, message):
         if not self.regex_update:
-            raise ValueError("Missing Regex")
+            return False
         if self.regex_update.search(str(message)):
             return True
         else:
@@ -162,3 +164,23 @@ class Pump(Base):
     def decode_message(self, message):
         m = self.regex.match(str(message))
         self.level = m.group(1)
+
+
+class Switch(Base):
+    def __init__(self, name, update_msg, message_broker):
+        self.message_broker = message_broker
+        super().__init__(name, update_msg)
+        self.actions.append("toggle")
+        if not Base.env:
+            Base.env = wemo.WeMoThread(message_broker=message_broker)
+            Base.env.start()
+
+    def request_update(self, *args, **kwargs):
+        self.message_broker.ws_server_queue.put(json.dumps({"wemo_response":{"name":self.name,
+                                                                  "action": "get_state",
+                                                                  "value": Base.env.get_state(self.name)}}))
+
+    def toggle(self, *args, **kwargs):
+        self.message_broker.ws_server_queue.put(json.dumps({"wemo_response": {"name": self.name,
+                                                                   "action": "toggle",
+                                                                   "value": Base.env.toggle(self.name)}}))
