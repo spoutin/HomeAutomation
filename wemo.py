@@ -41,8 +41,7 @@ class WeMoThread(threading.Thread):
         @receiver(statechange)
         def motion(sender, **kwargs):
             state = "on" if kwargs.get('state') else "off"
-            print("{} state is {}".format(sender.name, state))
-            self.message_broker.ws_server_queue.put(json.dumps({"wemo":{"name":sender.name,"value":state}}))
+            self.message_broker.get_unit(sender.name).request_update()
 
         self.env.start()
         self.env.discover(10)

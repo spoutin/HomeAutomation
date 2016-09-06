@@ -31,14 +31,18 @@ class RestAPI(tornado.web.RequestHandler):
         if unit_id:
             unit = baseObject.get_unit(self.message_broker.units, int(unit_id))
             if unit:
-                self.write("Unit: " + json.dumps(unit.__dict__, default=str))
+                self.write(json.dumps(unit.__dict__, default=str))
             else:
                 self.set_status(404)
                 self.finish("<html><body>Unit ID {} not found</body></html>".format(unit_id))
         else:
-            self.write("All Units:" + json.dumps(baseObject.units_to_dict(self.message_broker.units), default=str))
+            self.write(json.dumps(baseObject.units_to_dict_group(self.message_broker.units), default=str))
 
     def post(self, unit_id=None):
+        if not unit_id:
+            self.set_status(500)
+            self.finish("<html><body>Missing Unit ID</body></html>")
+            return
         unit = baseObject.get_unit(self.message_broker.units, int(unit_id))
         if unit:
             unit.request_update(self.message_broker.pi_clients)
@@ -47,17 +51,21 @@ class RestAPI(tornado.web.RequestHandler):
             self.set_status(404)
             self.finish("<html><body>Unit ID {} not found</body></html>".format(unit_id))
 
-    def put(self, unit_id=None):
-        if unit_id:
-            unit = baseObject.get_unit(self.message_broker.units, int(unit_id))
-            if not unit:
-                self.set_status(404)
-                self.finish("<html><body>Unknown Unit ID</body></html>")
-                return
-            data = tornado.escape.json_decode(self.request.body)
-            for key, value in data.items():
-                unit.run_actions(function=key, value=value, pi_clients=self.message_broker.pi_clients)
-                self.write("<html><body>Request Sent to {} {} {}</body></html>".format(key, value, unit_id))
-        else:
-            self.set_status(404)
+    def put(self, unit_id=None, action=None):
+        if not unit_id:
+            self.set_status(500)
             self.finish("<html><body>Missing Unit ID</body></html>")
+            return
+        if not action:
+            self.set_status(500)
+            self.finish("<html><body>Missing Action</body></html>")
+            return
+
+        unit = baseObject.get_unit(self.message_broker.units, int(unit_id))
+        if not unit:
+            self.set_status(404)
+            self.finish("<html><body>Unknown Unit ID</body></html>")
+            return
+
+        unit.run_actions(function=action, pi_clients=self.message_broker.pi_clients)
+        self.write("<html><body>Request Sent to {} {}</body></html>".format(action, unit.name))

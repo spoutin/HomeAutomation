@@ -1,0 +1,11 @@
+<div class="box container-fluid">
+    <h4>State: <b>{{unit.state| state }}</b></h4>
+    <div class="btn-group btn-group-lg">
+        <button type="button" class="btn btn-primary" ng-click="requestupdate()">
+            <span class="glyphicon glyphicon-refresh" aria-label="refresh" ng-class="{'gly-spin': unit.refresh}"></span>
+        </button>
+        <button type="button" class="btn btn-primary" ng-click="requestToggle()">
+            <span class="glyphicon glyphicon-sort" aria-label="toggle" ng-class="{'gly-spin': unit.toggle}"></span>
+        </button>
+    </div>
+</div>

@@ -35,8 +35,17 @@ class MessageBroker:
     def check_units(self, message):
         for unit in self.units:
             if unit.check_message(str(message)):
-                unit.decode_message(message)
-                self.ws_server_queue.put(str(message), block=True, timeout=1)
+                msg = unit.decode_message(message)
+                if msg:
+                    self.ws_server_queue.put(str(msg), block=True, timeout=1)
+                else:
+                    self.ws_server_queue.put(str(message), block=True, timeout=1)
+
+    def get_unit(self,name):
+        for unit in self.units:
+            if unit.name == name:
+                return unit
+        return
 
     class SenderThread(threading.Thread):
 

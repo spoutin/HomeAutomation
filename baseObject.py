@@ -5,6 +5,7 @@ import json
 import configparser
 import itertools
 import wemo
+import collections
 
 
 # Input is the list of units
@@ -14,6 +15,15 @@ def units_to_dict(units):
     for unit in units:
         unit_dict.append(unit.__dict__)
     return unit_dict
+
+
+def units_to_dict_group(units):
+    unit_dict = {}
+    for unit in units:
+        if unit.type not in unit_dict:
+            unit_dict[unit.type] = []
+        unit_dict[unit.type].append(unit.__dict__)
+    return collections.OrderedDict(sorted(unit_dict.items()))
 
 
 def get_unit(units, unit_id):
@@ -29,6 +39,8 @@ class Base(object):
 
     def __init__(self, name, update_msg=None):
         self.name = name
+        self.clean_name = re.sub('[^A-Za-z0-9]+', '', self.name).lower()
+        self.type = "Base"
         self.regex = None
         self.regex_update = None
         self.update_msg = update_msg
@@ -78,6 +90,7 @@ class Temp(Base):
 
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
+        self.type = "Temperature"
         self.temp = None
         self.humidity = None
 
@@ -85,13 +98,14 @@ class Temp(Base):
         m = self.regex.match(str(message))
         self.temp = m.group(2)
         self.humidity = m.group(1)
-        # print("%s - Temp: %s Humidity: %s" %(self.name, self.temp, self.humidity))
+        return json.dumps({'unit_update': self.__dict__}, default=str)
 
 
 class Nest(Base):
 
     def __init__(self, name, update_msg, ws_queue):
         super().__init__(name, update_msg)
+        self.type = "Nest"
         try:
             config = configparser.ConfigParser()
             config.read('config/nest.ini')
@@ -126,33 +140,32 @@ class Nest(Base):
         self.away = self.napi.structures[0].away
         self.ac_state = self.napi.structures[0].devices[0].hvac_ac_state
         self.heater_state = self.napi.structures[0].devices[0].hvac_heater_state
-        self.ws_queue.put(json.dumps({"nest": {"temp": round(self.temp, 1),
-                                               "humidity": self.humidity,
-                                               "ac_state": self.ac_state,
-                                               "heater_state": self.heater_state,
-                                               "target": round(self.target, 1),
-                                               "away": self.away
-                                               }
-                                      }))
+        self.ac_state = self.napi.structures[0].devices[0].hvac_ac_state
+        self.mode = self.napi.structures[0].devices[0].mode
+        self.ws_queue.put(json.dumps({'unit_update': self.__dict__}, default=str))
 
 
 class Garage(Base):
 
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
-        self.status = None
+        self.type = "Garage"
+        self.status = ""
         # additional actions
         self.actions.append("toggle")
 
     def decode_message(self, message):
         m = self.regex.match(str(message))
         self.status = m.group(1)
+        return json.dumps({'unit_update': self.__dict__}, default=str)
 
-    def toggle(self, state, pi_clients):
-        if state == "open":
+    def toggle(self, pi_clients):
+        if self.status.lower() == "close":
             self.send_to_pi(pi_clients, "GRGOPN")
-        elif state == "close":
+        elif self.status.lower() == "open":
             self.send_to_pi(pi_clients, "GRGCLS")
+        else:
+            raise ValueError("Unknown status: {}".format(self.status))
 
 
 class Pump(Base):
@@ -160,27 +173,29 @@ class Pump(Base):
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
         self.level = None
+        self.type = "Sump Pump"
 
     def decode_message(self, message):
         m = self.regex.match(str(message))
         self.level = m.group(1)
+        return json.dumps({'unit_update': self.__dict__}, default=str)
 
 
 class Switch(Base):
     def __init__(self, name, update_msg, message_broker):
         self.message_broker = message_broker
         super().__init__(name, update_msg)
+        self.type = "Switches"
         self.actions.append("toggle")
+        self.state = ""
         if not Base.env:
             Base.env = wemo.WeMoThread(message_broker=message_broker)
             Base.env.start()
 
     def request_update(self, *args, **kwargs):
-        self.message_broker.ws_server_queue.put(json.dumps({"wemo_response":{"name":self.name,
-                                                                  "action": "get_state",
-                                                                  "value": Base.env.get_state(self.name)}}))
+        self.state = Base.env.get_state(self.name)
+        self.message_broker.ws_server_queue.put(json.dumps({'unit_update': self.__dict__}, default=str))
 
     def toggle(self, *args, **kwargs):
-        self.message_broker.ws_server_queue.put(json.dumps({"wemo_response": {"name": self.name,
-                                                                   "action": "toggle",
-                                                                   "value": Base.env.toggle(self.name)}}))
+        self.state = Base.env.toggle(self.name)
+        self.request_update()
