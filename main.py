@@ -47,7 +47,7 @@ app = tornado.web.Application([
     (r"/websocket/", websocket_server.WebSocketHandler, {"message_broker": message_broker}),
     (r"/api/v1/units/?$", websocket_server.RestAPI, {"message_broker": message_broker}),
     (r"/api/v1/units/(\d{1,3})/?$", websocket_server.RestAPI, {"message_broker": message_broker}),
-    (r"/api/v1/units/(\d{1,3})/([a-zA-Z0-9]+)/?$", websocket_server.RestAPI, {"message_broker": message_broker}),
+    (r"/api/v1/units/(\d{1,3})/([a-zA-Z0-9_]+)/?$", websocket_server.RestAPI, {"message_broker": message_broker}),
     ])
 app.listen(8888)
 tornado.ioloop.IOLoop.current().start()

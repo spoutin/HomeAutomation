@@ -25,7 +25,17 @@ app.controller('myCtrl', function ($scope, $http, $websocket, alertService) {
         }
         angular.forEach( $scope.units[msg['unit_update']['type']], function(value, key) {
             if (value.clean_name == msg['unit_update']['clean_name']) {
-               $scope.units[msg['unit_update']['type']][key] = msg['unit_update']
+                if (msg['unit_update']['type'] == 'Nest') {
+                    $scope.units[msg['unit_update']['type']][key].newTarget = msg['unit_update'].target;
+                }
+                angular.forEach(msg['unit_update'], function(value1, key1) {
+                    //Clear the refresh flag
+                    delete $scope.units[msg['unit_update']['type']][key].refresh;
+                    //Clear toggle flag
+                    delete $scope.units[msg['unit_update']['type']][key].toggle;
+                    //Update all values
+                    $scope.units[msg['unit_update']['type']][key][key1] = value1
+                });
             }
         });
     }).onError(function (err) {
@@ -69,27 +79,32 @@ app.directive('myAlertDisplay', ['alertService', function (alertService) {
             }
     }]);
 app.filter('temperature', function () {
-    return function (input, half) {
-        var x = 0;
-        if (half)  {
-            x = (Math.round(input * 2) / 2).toFixed(1)
-        }
-        else {
-            x = Math.round(input * 100) / 100;
-        }
-        return x + '℃';
+    return function (input) {
+        return input + '℃';
     };
 });
-app.filter('humidity', function () {
-    return function (input, half) {
-        var x = 0;
-        if (half)  {
-            x = (Math.round(input * 2) / 2).toFixed(1)
+app.filter('round', function () {
+    return function (input, decimal) {
+        if ((decimal <= 0) || !(decimal)) {
+            x = Math.round(input)
+        }
+        else if (decimal < 1) {
+            x = (Math.round(input * 2) / 2).toFixed(1);
+        }
+        else if (decimal >= 1) {
+            decimal = Math.pow(10, decimal);
+            x = Math.round(input * decimal) / decimal;
         }
         else {
             x = input
         }
-        return x + '%';
+        return x
+    }
+});
+
+app.filter('humidity', function () {
+    return function (input) {
+        return input + '%';
     };
 });
 app.filter('state', function () {
@@ -117,7 +132,7 @@ app.filter('nestAway', function () {
                state = "Home";
                break;
            case true:
-               state = "On";
+               state = "Away";
                break;
            default:
                state = "Unknown";

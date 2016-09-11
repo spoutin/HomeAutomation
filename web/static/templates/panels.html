@@ -1,6 +1,6 @@
-<div class="panel panel-primary">
+<div class="panel panel-primary flex-col">
     <div class="panel-heading">{{unitType}}</div>
-    <div class="panel-body">
+    <div class="panel-body flex-grow">
         <div class="container-fluid">
             <div ng-repeat="unit in unitList">
                 <p class="name" ng-if="unitList.length > 1">{{unit.name}}</p>

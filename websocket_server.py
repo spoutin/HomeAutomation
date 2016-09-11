@@ -67,5 +67,10 @@ class RestAPI(tornado.web.RequestHandler):
             self.finish("<html><body>Unknown Unit ID</body></html>")
             return
 
-        unit.run_actions(function=action, pi_clients=self.message_broker.pi_clients)
+        try:
+            data = json.loads(self.request.body.decode("utf-8"))
+        except ValueError:
+            data = ''
+
+        unit.run_actions(function=action, data=data, pi_clients=self.message_broker.pi_clients)
         self.write("<html><body>Request Sent to {} {}</body></html>".format(action, unit.name))

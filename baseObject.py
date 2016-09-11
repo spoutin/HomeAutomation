@@ -122,10 +122,17 @@ class Nest(Base):
         self.target = None
         self.away = None
         self.ws_queue = ws_queue
-        self.actions.append("update_temp")
+        self.actions.append("update_temperature")
+        self.actions.append("toggle_away")
 
-    def update_temp(self, value, **kwargs):
-        self.napi.structures[0].devices[0].temperature = int(value)
+    def toggle_away(self, **kwargs):
+        self.napi.structures[0].away = not self.away
+        return not self.away
+
+    def update_temperature(self, data, **kwargs):
+        if not data:
+            raise ValueError("Missing temperature value in json body")
+        self.napi.structures[0].devices[0].temperature = data['temperature']
 
     def request_update(self, *args, **kwargs):
         try:
@@ -142,6 +149,7 @@ class Nest(Base):
         self.heater_state = self.napi.structures[0].devices[0].hvac_heater_state
         self.ac_state = self.napi.structures[0].devices[0].hvac_ac_state
         self.mode = self.napi.structures[0].devices[0].mode
+        self.fan = self.napi.structures[0].devices[0].fan
         self.ws_queue.put(json.dumps({'unit_update': self.__dict__}, default=str))
 
 
@@ -159,8 +167,8 @@ class Garage(Base):
         self.status = m.group(1)
         return json.dumps({'unit_update': self.__dict__}, default=str)
 
-    def toggle(self, pi_clients):
-        if self.status.lower() == "close":
+    def toggle(self, pi_clients, **kwargs):
+        if self.status.lower() == "closed":
             self.send_to_pi(pi_clients, "GRGOPN")
         elif self.status.lower() == "open":
             self.send_to_pi(pi_clients, "GRGCLS")
