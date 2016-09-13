@@ -4,7 +4,7 @@ import websocket_server
 import MessageBroker
 import websocket_client
 import baseObject
-import os
+import threading
 
 
 class IndexHandler(tornado.web.RequestHandler):
@@ -39,11 +39,13 @@ message_broker.units.append(baseObject.Switch("Modem", "", message_broker=messag
 
 # Setup websocket to RaspberryPi
 wsc = websocket_client.Client('ws://10.0.0.25:8080/ws')
-wsc.setup(message_broker)
+t = threading.Thread(name='Websocket Client', target=wsc.setup, kwargs={'message_broker': message_broker})
+t.start()
+
 
 app = tornado.web.Application([
-    (r'^/?([^/]*)$', tornado.web.StaticFileHandler, {"path": r"web/", "default_filename": "index.html"}),
-    (r'/static/(.*)', tornado.web.StaticFileHandler, {'path': r"web/static/"}),
+    (r'^/?([^/]*)$', websocket_server.MyStaticFileHandler, {"path": r"web/", "default_filename": "index.html"}),
+    (r'/static/(.*)', websocket_server.MyStaticFileHandler, {'path': r"web/static/"}),
     (r"/websocket/", websocket_server.WebSocketHandler, {"message_broker": message_broker}),
     (r"/api/v1/units/?$", websocket_server.RestAPI, {"message_broker": message_broker}),
     (r"/api/v1/units/(\d{1,3})/?$", websocket_server.RestAPI, {"message_broker": message_broker}),

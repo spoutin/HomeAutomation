@@ -35,7 +35,7 @@ class MessageBroker:
     def check_units(self, message):
         for unit in self.units:
             if unit.check_message(str(message)):
-                msg = unit.decode_message(message)
+                msg = unit.decode_message(message, pi_clients=self.pi_clients)
                 if msg:
                     self.ws_server_queue.put(str(msg), block=True, timeout=1)
                 else:

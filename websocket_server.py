@@ -1,6 +1,13 @@
-import tornado.websocket
+import tornado.web
 import json
 import baseObject
+import tornado.websocket
+
+
+class MyStaticFileHandler(tornado.web.StaticFileHandler):
+    def set_extra_headers(self, path):
+        # Disable cache
+        self.set_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
 
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):

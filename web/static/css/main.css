@@ -1,3 +1,9 @@
+.container-fluid {
+  margin-right: auto;
+  margin-left: auto;
+  max-width: 950px; /* or 950px */
+}
+
 .center-block{
 	text-align:center;
 }

@@ -83,7 +83,10 @@ class Base(object):
 
     @staticmethod
     def send_to_pi(pi_clients, message):
-        [x.send(str(message)) for x in pi_clients]
+        try:
+            [x.send(str(message)) for x in pi_clients]
+        except (AttributeError, RuntimeError, OSError):
+            pass
 
 
 class Temp(Base):
@@ -94,7 +97,7 @@ class Temp(Base):
         self.temp = None
         self.humidity = None
 
-    def decode_message(self, message):
+    def decode_message(self, message, **kwargs):
         m = self.regex.match(str(message))
         self.temp = m.group(2)
         self.humidity = m.group(1)
@@ -162,10 +165,21 @@ class Garage(Base):
         # additional actions
         self.actions.append("toggle")
 
-    def decode_message(self, message):
+    def decode_message(self, message, pi_clients, **kwargs):
         m = self.regex.match(str(message))
         self.status = m.group(1)
+        # Send message to LED process
+        self.update_led(pi_clients)
         return json.dumps({'unit_update': self.__dict__}, default=str)
+
+    def update_led(self, pi_clients):
+        if self.status.lower() == 'open':
+            msg = {'led': 'red'}
+        elif self.status.lower() == 'closed':
+            msg = {'led': 'off'}
+        else:
+            msg = {'led': 'blue'}
+        self.send_to_pi(pi_clients, json.dumps(msg, str))
 
     def toggle(self, pi_clients, **kwargs):
         if self.status.lower() == "closed":
@@ -183,7 +197,7 @@ class Pump(Base):
         self.level = None
         self.type = "Sump Pump"
 
-    def decode_message(self, message):
+    def decode_message(self, message, **kwargs):
         m = self.regex.match(str(message))
         self.level = m.group(1)
         return json.dumps({'unit_update': self.__dict__}, default=str)
