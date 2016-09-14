@@ -1,0 +1,36 @@
+<div class="box container-fluid">
+    <div class="row equal">
+        <div class="col-sm-6">
+            <h4>Temperature: <b>{{unit.temp | round:.5| temperature}}</b> Humidity: <b>{{unit.humidity | humidity}}</b>
+            </h4>
+        </div>
+        <div class="col-sm-6">
+            <h4>Fan: <i class="glyphicon icon-fan" ng-class="{'fa-spin-custom': unit.fan}"></i> Mode: <i
+                    class="glyphicon icon-wavealt-seaalt"
+                    ng-class=" unit.mode == 'heat' ? 'heat' : ( unit.mode == 'cool' ? 'cool': '')"></i></h4>
+        </div>
+    </div>
+    <div class="row equal">
+        <div class="col-sm-12">
+            <div class="input-group input-group-lg">
+                <span class="input-group-btn">
+                    <button type="button" class="btn btn-primary" ng-click="requestupdate()">
+                        <span class="glyphicon glyphicon-refresh" aria-label="refresh" ng-class="{'gly-spin': unit.refresh}"></span>
+                    </button>
+                    <button type="button" class="btn btn-primary" ng-disabled="unit.refresh" ng-click="actionChangeTemp(.5)">
+                        <span class="glyphicon glyphicon-menu-up" aria-label="up"></span>
+                    </button>
+                </span>
+                <input type="text" class="form-control" ng-disabled="true" ng-value="unit.newTarget|round:.5">
+                <span class="input-group-btn">
+                    <button type="button" class="btn btn-primary" ng-disabled="unit.refresh" ng-click="actionChangeTemp(-.5)">
+                        <span class="glyphicon glyphicon-menu-down" aria-label="down"></span>
+                    </button>
+                    <button type="button" class="btn btn-primary">
+                        <span class="glyphicon glyphicon-home" aria-label="away" ng-disabled="unit.refresh" ng-class="{'away': unit.away}" ng-click="toggleAway()"></span>
+                    </button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>

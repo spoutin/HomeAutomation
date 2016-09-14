@@ -4,6 +4,8 @@ import requests.exceptions
 import json
 import configparser
 import itertools
+import wemo
+import collections
 
 
 # Input is the list of units
@@ -15,21 +17,36 @@ def units_to_dict(units):
     return unit_dict
 
 
+def units_to_dict_group(units):
+    unit_dict = {}
+    for unit in units:
+        if unit.type not in unit_dict:
+            unit_dict[unit.type] = []
+        unit_dict[unit.type].append(unit.__dict__)
+    return collections.OrderedDict(sorted(unit_dict.items()))
+
+
 def get_unit(units, unit_id):
     for unit in units:
         if unit.id == unit_id:
             return unit
     return
 
+
 class Base(object):
     _create_id = itertools.count(0)
+    env = None
 
     def __init__(self, name, update_msg=None):
         self.name = name
+        self.clean_name = re.sub('[^A-Za-z0-9]+', '', self.name).lower()
+        self.type = "Base"
         self.regex = None
         self.regex_update = None
         self.update_msg = update_msg
         self.id = self._create_id.__next__()
+        # Default Actions
+        self.actions = ["request_update"]
 
     def set_regex(self, pattern):
         self.regex = re.compile(pattern)
@@ -41,7 +58,7 @@ class Base(object):
 
     def check_update(self, message):
         if not self.regex_update:
-            raise ValueError("Missing Regex")
+            return False
         if self.regex_update.search(str(message)):
             return True
         else:
@@ -55,35 +72,46 @@ class Base(object):
         else:
             return False
 
-    def request_update(self, pi_clients):
+    def request_update(self, pi_clients, **kwargs):
         self.send_to_pi(pi_clients, self.update_msg)
+
+    def run_actions(self, function, **kwargs):
+        if function in self.actions:
+            getattr(self, function)(**kwargs)
+        else:
+            raise ValueError("Request unknown or not allowed {}".format(function))
 
     @staticmethod
     def send_to_pi(pi_clients, message):
-        [x.send(str(message)) for x in pi_clients]
+        try:
+            [x.send(str(message)) for x in pi_clients]
+        except (AttributeError, RuntimeError, OSError):
+            pass
 
 
 class Temp(Base):
 
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
+        self.type = "Temperature"
         self.temp = None
         self.humidity = None
 
-    def decode_message(self, message):
+    def decode_message(self, message, **kwargs):
         m = self.regex.match(str(message))
         self.temp = m.group(2)
         self.humidity = m.group(1)
-        # print("%s - Temp: %s Humidity: %s" %(self.name, self.temp, self.humidity))
+        return json.dumps({'unit_update': self.__dict__}, default=str)
 
 
 class Nest(Base):
 
     def __init__(self, name, update_msg, ws_queue):
         super().__init__(name, update_msg)
+        self.type = "Nest"
         try:
             config = configparser.ConfigParser()
-            config.read('nest.ini')
+            config.read('config/nest.ini')
             username = config['nest']['username']
             password = config['nest']['password']
         except KeyError:
@@ -97,8 +125,19 @@ class Nest(Base):
         self.target = None
         self.away = None
         self.ws_queue = ws_queue
+        self.actions.append("update_temperature")
+        self.actions.append("toggle_away")
 
-    def request_update(self, *args):
+    def toggle_away(self, **kwargs):
+        self.napi.structures[0].away = not self.away
+        return not self.away
+
+    def update_temperature(self, data, **kwargs):
+        if not data:
+            raise ValueError("Missing temperature value in json body")
+        self.napi.structures[0].devices[0].temperature = data['temperature']
+
+    def request_update(self, *args, **kwargs):
         try:
             self._request_update()
         except requests.exceptions.HTTPError:
@@ -111,31 +150,44 @@ class Nest(Base):
         self.away = self.napi.structures[0].away
         self.ac_state = self.napi.structures[0].devices[0].hvac_ac_state
         self.heater_state = self.napi.structures[0].devices[0].hvac_heater_state
-        self.ws_queue.put(json.dumps({"nest": {"temp": round(self.temp, 1),
-                                               "humidity": self.humidity,
-                                               "ac_state": self.ac_state,
-                                               "heater_state": self.heater_state,
-                                               "target": round(self.target, 1),
-                                               "away": self.away
-                                               }
-                                      }))
+        self.ac_state = self.napi.structures[0].devices[0].hvac_ac_state
+        self.mode = self.napi.structures[0].devices[0].mode
+        self.fan = self.napi.structures[0].devices[0].fan
+        self.ws_queue.put(json.dumps({'unit_update': self.__dict__}, default=str))
 
 
 class Garage(Base):
 
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
-        self.status = None
+        self.type = "Garage"
+        self.status = ""
+        # additional actions
+        self.actions.append("toggle")
 
-    def decode_message(self, message):
+    def decode_message(self, message, pi_clients, **kwargs):
         m = self.regex.match(str(message))
         self.status = m.group(1)
+        # Send message to LED process
+        self.update_led(pi_clients)
+        return json.dumps({'unit_update': self.__dict__}, default=str)
 
-    def open_close(self, state, pi_clients):
-        if state == "Open":
+    def update_led(self, pi_clients):
+        if self.status.lower() == 'open':
+            msg = {'led': 'red'}
+        elif self.status.lower() == 'closed':
+            msg = {'led': 'off'}
+        else:
+            msg = {'led': 'blue'}
+        self.send_to_pi(pi_clients, json.dumps(msg, str))
+
+    def toggle(self, pi_clients, **kwargs):
+        if self.status.lower() == "closed":
             self.send_to_pi(pi_clients, "GRGOPN")
-        elif state == "Close":
+        elif self.status.lower() == "open":
             self.send_to_pi(pi_clients, "GRGCLS")
+        else:
+            raise ValueError("Unknown status: {}".format(self.status))
 
 
 class Pump(Base):
@@ -143,7 +195,29 @@ class Pump(Base):
     def __init__(self, name, update_msg):
         super().__init__(name, update_msg)
         self.level = None
+        self.type = "Sump Pump"
 
-    def decode_message(self, message):
+    def decode_message(self, message, **kwargs):
         m = self.regex.match(str(message))
         self.level = m.group(1)
+        return json.dumps({'unit_update': self.__dict__}, default=str)
+
+
+class Switch(Base):
+    def __init__(self, name, update_msg, message_broker):
+        self.message_broker = message_broker
+        super().__init__(name, update_msg)
+        self.type = "Switches"
+        self.actions.append("toggle")
+        self.state = ""
+        if not Base.env:
+            Base.env = wemo.WeMoThread(message_broker=message_broker)
+            Base.env.start()
+
+    def request_update(self, *args, **kwargs):
+        self.state = Base.env.get_state(self.name)
+        self.message_broker.ws_server_queue.put(json.dumps({'unit_update': self.__dict__}, default=str))
+
+    def toggle(self, *args, **kwargs):
+        self.state = Base.env.toggle(self.name)
+        self.request_update()

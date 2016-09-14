@@ -1,0 +1,24 @@
+<div class="panel panel-primary flex-col">
+    <div class="panel-heading">{{unitType}}</div>
+    <div class="panel-body flex-grow">
+        <div class="container-fluid">
+            <div ng-repeat="unit in unitList">
+                <p class="name" ng-if="unitList.length > 1">{{unit.name}}</p>
+                <!-- Switches -->
+                <div ng-if="unitType == 'Switches'" my-unit data-type="switches" data-unit="unit"></div>
+
+                <!-- Temperature -->
+                <div ng-if="unitType == 'Temperature'" my-unit data-type="temperature" data-unit="unit"></div>
+
+                <!-- Sump Pump -->
+                <div ng-if="unitType == 'Sump Pump'" my-unit data-type="sumppump" data-unit="unit"></div>
+
+                <!-- Garage -->
+                <div ng-if="unitType == 'Garage'" my-unit data-type="garage" data-unit="unit"></div>
+
+                <!-- Nest -->
+                <div ng-if="unitType == 'Nest'" my-unit data-type="nest" data-unit="unit"></div>
+            </div>
+        </div>
+    </div>
+</div>

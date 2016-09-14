@@ -1,0 +1,8 @@
+<div class="box container-fluid">
+    <h4>Temperature: <b>{{unit.temp | round:1| temperature}}</b> Humidity: <b>{{unit.humidity | round |humidity}}</b></h4>
+    <div class="btn-group btn-group-lg">
+        <button type="button" class="btn btn-primary" ng-click="requestupdate()">
+            <span class="glyphicon glyphicon-refresh" aria-label="refresh" ng-class="{'gly-spin': unit.refresh}"></span>
+        </button>
+    </div>
+</div>
