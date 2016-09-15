@@ -18,6 +18,8 @@ class WebSocketHandler(tornado.websocket.WebSocketHandler):
 
     def open(self, *args):
         self.message_broker.ws_server_connection.append(self)
+        # Send control or monitor messages to frontend clients
+        self.message_broker.check_and_update_ws_client()
 
     def on_close(self):
         self.message_broker.ws_server_connection.remove(self)

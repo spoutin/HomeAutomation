@@ -1,6 +1,7 @@
 import queue
 import threading
 from timer import perpetualTimer
+import json
 
 
 class MessageBroker:
@@ -23,8 +24,30 @@ class MessageBroker:
 
     # Run the update function on all units
     def update_all(self):
+        # update all units
         for unit in self.units:
             unit.request_update(self.pi_clients)
+
+    def check_and_update_ws_client(self):
+        if len(self.pi_clients) < 1:
+            message = json.dumps({'__control__': {
+                'name': 'ws_client',
+                'message': 'Lost Connectivity',
+                'error': 1,
+                'msg_id': 1
+                }})
+            self.ws_client_disconnected = True
+            self.ws_server_queue.put(str(message), block=True, timeout=1)
+        else:
+            message = json.dumps({'__control__': {
+                'name': 'ws_client',
+                'message': 'websocket connection restored',
+                'error': 0,
+                'msg_id': 1
+            }})
+            if self.ws_client_disconnected:
+                self.ws_client_disconnected = False
+                self.ws_server_queue.put(str(message), block=True, timeout=1)
 
     def check_update_units(self, message):
         for unit in self.units:

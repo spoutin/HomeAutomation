@@ -16,10 +16,29 @@ app.controller('myCtrl', function ($scope, $http, $websocket, alertService) {
                 alertService.add('danger', 'Error ' + response.status + ' - Unable to get list of Units');
             }
         );
-    var dataStream = $websocket('ws://localhost:8888/websocket/');
+
+    function url(s) {
+        var l = window.location;
+        return ((l.protocol === "https:") ? "wss://" : "ws://") + l.host + l.pathname + s;
+    }
+
+    var dataStream = $websocket(url('websocket/'));
     dataStream.onMessage(function (message) {
         //console.log(message.data);
         var msg = JSON.parse(message.data);
+        if ('__control__' in msg) {
+            // Control msg
+            if (msg.__control__.error) {
+                // Error - Fire Message
+                alertService.add('danger', msg.__control__.name + ': ' + msg.__control__.message, null, msg.__control__.msg_id);
+                return;
+            }
+            else {
+                //add cleaning alert
+                alertService.add('success', msg.__control__.name + ': ' + msg.__control__.message, 20000, msg.__control__.msg_id);
+                return;
+            }
+        }
         if (!($scope.units)) {
             return;
         }
@@ -48,8 +67,20 @@ app.factory('alertService', ['$timeout', function ($timeout) {
         // create an array of alerts
         alertService.alerts = [];
 
-        alertService.add = function (type, msg, timeout) {
-            var index = alertService.alerts.push({ 'type': type, 'msg': msg });
+        alertService.add = function (type, msg, timeout, msg_id) {
+            msg_id = typeof msg_id !== 'undefined' ? msg_id : false;
+            var check = 0;
+            angular.forEach(alertService.alerts, function(value, key){
+                if (value.type == type && value.msg == msg) {
+                    check = 1;
+                }
+                else if (value.msg_id == msg_id && value.msg_id != false){
+                    // Check for clearing msg
+                    delete alertService.alerts[key]
+                }
+            });
+            if (check == 1) return;
+            var index = alertService.alerts.push({ 'type': type, 'msg': msg, 'msg_id': msg_id });
             if (!(timeout === undefined || timeout === null)) {
                 $timeout(function (index) {alertService.closeAlert(index)}, timeout);
             }

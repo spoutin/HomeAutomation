@@ -28,6 +28,9 @@ class Client(WebSocketClient):
 
     def closed(self, code, reason=None):
         print("Websocket Client Connection Lost: ", code, reason)
+        self.message_broker.pi_clients.remove(self)
+        # Update frontend with loss of connectivity
+        self.message_broker.check_and_update_ws_client()
         # print("Timing out for a bit. . .")
         time.sleep(3)
         # print("Reconnecting. . .")
@@ -43,7 +46,8 @@ class Client(WebSocketClient):
         pingthread.start()
         print("Connected to WebSocket")
         self.message_broker.pi_clients.append(self)
-        # Start heartbeat
+        # update front with connectivity
+        self.message_broker.check_and_update_ws_client()
 
     def received_message(self, m):
         # Check message broker for any objects that match the message
