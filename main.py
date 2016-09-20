@@ -44,8 +44,8 @@ t.start()
 
 
 app = tornado.web.Application([
-    (r'^/?([^/]*)$', websocket_server.MyStaticFileHandler, {"path": r"web/", "default_filename": "index.html"}),
-    (r'/static/(.*)', websocket_server.MyStaticFileHandler, {'path': r"web/static/"}),
+    (r'^/?([^/]*)$', websocket_server.MyStaticFileHandler, {"path": baseObject.get_script_path()+ "/web/", "default_filename": "index.html"}),
+    (r'/static/(.*)', websocket_server.MyStaticFileHandler, {'path': baseObject.get_script_path()+ "/web/static/"}),
     (r"/websocket/?", websocket_server.WebSocketHandler, {"message_broker": message_broker}),
     (r"/api/v1/units/?$", websocket_server.RestAPI, {"message_broker": message_broker}),
     (r"/api/v1/units/(\d{1,3})/?$", websocket_server.RestAPI, {"message_broker": message_broker}),

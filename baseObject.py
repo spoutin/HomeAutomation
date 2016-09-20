@@ -121,7 +121,7 @@ class Nest(Base):
         except KeyError:
             print("Missing Nest username or password in nest.ini file")
             raise
-        self.napi = nest_api.Nest(username, password, access_token_cache_file='./cache/auth_cache')
+        self.napi = nest_api.Nest(username, password, access_token_cache_file=get_script_path() + '/cache/auth_cache')
         self.temp = None
         self.humidity = None
         self.ac_state = None
