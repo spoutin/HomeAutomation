@@ -53,15 +53,15 @@ input {
 }
 
 .away {
-    color: #922b2b;
+    color: red;
 }
 
 .heat {
-  color: #922b2b;
+  color: red;
 }
 
 .cool {
-  color: #337ab7;
+  color: #0000ff;
 }
 .on {
   color: #ff6c00;

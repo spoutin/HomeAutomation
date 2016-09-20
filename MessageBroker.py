@@ -2,6 +2,7 @@ import queue
 import threading
 from timer import perpetualTimer
 import json
+from elasticsearch import Elasticsearch
 
 
 class MessageBroker:
@@ -13,6 +14,10 @@ class MessageBroker:
         self.ws_wemo_queue = queue.Queue()
         self.ws_server_connection = []
         self.pi_clients = []
+        self.ws_client_disconnected = False
+
+        # setup Elasticsearch
+        self.es = Elasticsearch('127.0.0.1:9200')
 
         # Setup WS Sender
         self.senderthread = self.SenderThread(self)
@@ -63,8 +68,14 @@ class MessageBroker:
                     self.ws_server_queue.put(str(msg), block=True, timeout=1)
                 else:
                     self.ws_server_queue.put(str(message), block=True, timeout=1)
+            try:
+                if unit.add_elasticsearch:
+                    self.es.index(index=unit.type, doc_type=unit.cleanname, body=unit.__dict__)
+            except AttributeError:
+                # ES is not setup
+                pass
 
-    def get_unit(self,name):
+    def get_unit(self, name):
         for unit in self.units:
             if unit.name == name:
                 return unit

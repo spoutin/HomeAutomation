@@ -6,7 +6,7 @@ import configparser
 import itertools
 import wemo
 import collections
-
+import os, sys
 
 # Input is the list of units
 # Output is the list of units as dictionaries
@@ -31,6 +31,10 @@ def get_unit(units, unit_id):
         if unit.id == unit_id:
             return unit
     return
+
+
+def get_script_path():
+    return os.path.dirname(os.path.realpath(sys.argv[0]))
 
 
 class Base(object):
@@ -111,7 +115,7 @@ class Nest(Base):
         self.type = "Nest"
         try:
             config = configparser.ConfigParser()
-            config.read('config/nest.ini')
+            config.read(get_script_path()+'/config/nest.ini')
             username = config['nest']['username']
             password = config['nest']['password']
         except KeyError:

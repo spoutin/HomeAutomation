@@ -31,9 +31,7 @@ class Client(WebSocketClient):
         self.message_broker.pi_clients.remove(self)
         # Update frontend with loss of connectivity
         self.message_broker.check_and_update_ws_client()
-        # print("Timing out for a bit. . .")
         time.sleep(3)
-        # print("Reconnecting. . .")
         try:
             self.sock.close()
         except AttributeError:

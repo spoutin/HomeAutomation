@@ -2,8 +2,6 @@ from ouimeaux.environment import Environment
 from ouimeaux.signals import receiver, statechange, devicefound
 from ouimeaux.environment import UnknownDevice
 import threading
-import json
-import queue
 
 
 class WeMoThread(threading.Thread):
