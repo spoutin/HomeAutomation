@@ -2,7 +2,7 @@ import queue
 import threading
 from timer import perpetualTimer
 import json
-from elasticsearch import Elasticsearch
+import es
 
 
 class MessageBroker:
@@ -17,7 +17,7 @@ class MessageBroker:
         self.ws_client_disconnected = False
 
         # setup Elasticsearch
-        self.es = Elasticsearch('127.0.0.1:9200')
+        self.es = es.es()
 
         # Setup WS Sender
         self.senderthread = self.SenderThread(self)
@@ -27,11 +27,12 @@ class MessageBroker:
         timer = perpetualTimer(60, self.update_all)
         timer.start()
 
-    # Run the update function on all units
+    # Run the update function on all units and send
     def update_all(self):
         # update all units
         for unit in self.units:
             unit.request_update(self.pi_clients)
+            self.es.add(index=unit.type, name=unit.clean_name, message=unit.__dict__)
 
     def check_and_update_ws_client(self):
         if len(self.pi_clients) < 1:
@@ -68,12 +69,6 @@ class MessageBroker:
                     self.ws_server_queue.put(str(msg), block=True, timeout=1)
                 else:
                     self.ws_server_queue.put(str(message), block=True, timeout=1)
-            try:
-                if unit.add_elasticsearch:
-                    self.es.index(index=unit.type, doc_type=unit.cleanname, body=unit.__dict__)
-            except AttributeError:
-                # ES is not setup
-                pass
 
     def get_unit(self, name):
         for unit in self.units:

@@ -1,7 +1,7 @@
 .container-fluid {
-  margin-right: auto;
-  margin-left: auto;
-  max-width: 950px; /* or 950px */
+    margin-right: auto;
+    margin-left: auto;
+    max-width: 950px; /* or 950px */
 }
 
 .center-block{
