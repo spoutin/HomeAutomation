@@ -36,6 +36,7 @@ message_broker.units.append(baseObject
                             .set_regex_update('update_pump'))
 message_broker.units.append(baseObject.Switch("Christmas Light", "", message_broker=message_broker))
 message_broker.units.append(baseObject.Switch("Modem", "", message_broker=message_broker))
+message_broker.units.append(baseObject.Switch("Master Bedroom", "", message_broker=message_broker))
 
 # Setup websocket to RaspberryPi
 wsc = websocket_client.Client('ws://10.0.0.25:8080/ws')
