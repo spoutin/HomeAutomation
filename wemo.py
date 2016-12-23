@@ -25,7 +25,7 @@ class WeMoThread(threading.Thread):
     def get_state(self, name):
         try:
             item = self.env.get_switch(name=name)
-            return item.get_state()
+            return item.get_state(force_update=True)
         except UnknownDevice:
             print("Error - Failed to find device {}".format(name))
             return
