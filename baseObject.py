@@ -191,7 +191,8 @@ class Garage(Base):
         elif self.status.lower() == "open":
             self.send_to_pi(pi_clients, "GRGCLS")
         else:
-            raise ValueError("Unknown status: {}".format(self.status))
+            self.send_to_pi(pi_clients, "GRGCLS")
+            # raise ValueError("Unknown status: {}".format(self.status))
 
 
 class Pump(Base):
